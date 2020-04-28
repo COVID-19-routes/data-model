@@ -48,6 +48,7 @@ def _read_csv(p):
         p,
         encoding="UTF-8",
         na_values=[""],
+        keep_default_na=False,
         converters={"data": pd.to_datetime},
     )
 
