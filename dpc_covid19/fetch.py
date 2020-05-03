@@ -31,7 +31,7 @@ DATA_COLS_REG = [
 ]
 TEXT_COLS_REG = ["note_it", "note_en"]
 
-INDEX_COLS_REG = ["data", "codice_regione"]
+INDEX_COLS_REG = ["data", "codice_regione", "codice_provincia"]
 INDEX_COLS_PRO = ["data", "codice_provincia"]
 
 # regex of province and regioni pathnames
@@ -77,16 +77,15 @@ def _merge_cols(df):
 def _read_regioni(path):
     frame = _read_csv(path)
 
-    # merge 'P.A. Trento', 'P.A. Bolzano' into "Trentino-Alto Adige"
-    trbz = frame[frame.codice_regione == 4]
-    frame.drop(index=trbz.index, inplace=True)
+    frame["codice_provincia"] = 0
+    frame.loc[
+        frame["denominazione_regione"] == "P.A. Bolzano", "codice_provincia"
+    ] = 21
+    frame.loc[
+        frame["denominazione_regione"] == "P.A. Trento", "codice_provincia"
+    ] = 22
 
-    trentino = trbz.iloc[0][["data", "codice_regione"]].copy()
-    trentino["denominazione_regione"] = "Trentino-Alto Adige"
-    trentino = trentino.append(trbz[DATA_COLS_REG].sum())
-    trentino = trentino.append(_merge_cols(trbz[TEXT_COLS_REG]))
-
-    return frame.append(trentino, ignore_index=True)
+    return frame
 
 
 def regioni():
@@ -125,18 +124,33 @@ def province():
     return province
 
 
-def _check_province(regioni, province):
+def _check_totale_casi(reg, pro):
+    if len(pro) != len(reg):
+        raise ValueError("different number of data points")
+    if (abs(pro.index - reg.index.get_level_values("data")) > "1h").any():
+        raise ValueError("data points at different times")
+    # we know that first province data point is empty
+    assert pro.values[0] == 0
+    if (pro.values[1:] != reg.values[1:]).any():
+        raise ValueError("inconsistent data")
+
+
+def _check_reg_pro(regioni, province):
+    _TRENTINO = 4
     for key, group in province.groupby(by="codice_regione"):
+        if key == _TRENTINO:
+            continue
         pro = group["totale_casi"].sum(level="data")
         reg = regioni["totale_casi"].xs(key, level="codice_regione")
-        if len(pro) != len(reg):
-            raise ValueError("different number of data points")
-        if (abs(pro.index - reg.index) > "1h").any():
-            raise ValueError("data points at different times")
-        # we now that first province data point is empty
-        assert pro.values[0] == 0
-        if (pro.values[1:] != reg.values[1:]).any():
-            raise ValueError("inconsistent data")
+        _check_totale_casi(reg, pro)
+    for key, group in regioni.groupby(by="codice_provincia"):
+        if key == 0:
+            continue
+        reg = group["totale_casi"]
+        pro = province["totale_casi"].xs(key=key, level="codice_provincia")
+        _check_totale_casi(reg, pro)
+
+    return
 
 
 def _check_invariant(inv, msg):
@@ -147,7 +161,10 @@ def _check_invariant(inv, msg):
 
 
 def validate(regioni, province):
-    _check_province(regioni, province)
+    """validate data against some invariants"""
+
+    # province data is consistent with regioni data
+    _check_reg_pro(regioni, province)
 
     # check different data invariants
 
@@ -172,16 +189,19 @@ def validate(regioni, province):
     )
     _check_invariant(i4, "totale_casi")
 
+    # levels to unstack
+    tlevels = regioni.index.names[1:]
+
     # variazione_totale_positivi = Δ totale_positivi
     i3 = (
-        regioni.totale_positivi.unstack(1).diff().iloc[1:]
-        != regioni.variazione_totale_positivi.unstack(1).iloc[1:]
-    ).stack()
+        regioni.totale_positivi.unstack(tlevels).diff().iloc[1:]
+        != regioni.variazione_totale_positivi.unstack(tlevels).iloc[1:]
+    ).stack(tlevels)
     _check_invariant(i3, "Δ totale_positivi")
 
     # nuovi_positivi =  Δ totale_casi
     i5 = (
-        regioni.totale_casi.unstack(1).diff().iloc[1:]
-        != regioni.nuovi_positivi.unstack(1).iloc[1:]
-    ).stack()
+        regioni.totale_casi.unstack(tlevels).diff().iloc[1:]
+        != regioni.nuovi_positivi.unstack(tlevels).iloc[1:]
+    ).stack(tlevels)
     _check_invariant(i5, "Δ totale_casi")
