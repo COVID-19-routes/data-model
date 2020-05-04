@@ -52,6 +52,8 @@ def _read_csv(p):
         converters={"data": pd.to_datetime},
     )
 
+    frame["data"] = frame["data"].dt.tz_localize("Europe/Rome")
+
     # column "stato" must be "ITA"
     assert (frame.stato == "ITA").all()
 
