@@ -1,3 +1,10 @@
+from collections import namedtuple
+
+Provincia = namedtuple(
+    "Provincia",
+    ["denominazione_provincia", "sigla_provincia", "codice_regione"],
+)
+
 _REGIONI = (
     (1, "Piemonte"),
     (2, "Valle d'Aosta"),
@@ -84,7 +91,7 @@ _PROVINCE = (
     (60, "Frosinone", "FR", 12),
     (61, "Caserta", "CE", 15),
     (62, "Benevento", "BN", 15),
-    (63, "Napoli", None, 15),
+    (63, "Napoli", "NA", 15),
     (64, "Avellino", "AV", 15),
     (65, "Salerno", "SA", 15),
     (66, "L'Aquila", "AQ", 13),
@@ -152,5 +159,6 @@ _PROVINCE = (
     (999, None, None, 5),
 )
 
-c_denominazione_regione = dict(_REGIONI)
-c_denominazione_provincia = dict((i, j) for i, j, *_ in _PROVINCE)
+denominazione_regione = dict(_REGIONI)
+denominazione_provincia = dict((i, j) for i, j, *_ in _PROVINCE)
+province = dict((i, Provincia(*j)) for i, *j in _PROVINCE)
