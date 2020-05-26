@@ -8,6 +8,8 @@ import re
 import pandas as pd
 import requests
 
+from . import code
+
 URL_API = "https://api.github.com/repos/{owner}/{repo}/contents/{path}"
 URL_REG = URL_API.format(owner="pcm-dpc", repo="COVID-19", path="dati-regioni")
 URL_PRO = URL_API.format(
@@ -79,13 +81,31 @@ def _merge_cols(df):
 def _read_regioni(path):
     frame = _read_csv(path)
 
+    cr_max = max(code.denominazione_regione.keys())
+    i = frame["codice_regione"] > cr_max
     frame["codice_provincia"] = 0
-    frame.loc[
-        frame["denominazione_regione"] == "P.A. Bolzano", "codice_provincia"
-    ] = 21
-    frame.loc[
-        frame["denominazione_regione"] == "P.A. Trento", "codice_provincia"
-    ] = 22
+    frame.loc[i, "codice_provincia"] = frame["codice_regione"]
+
+    frame.loc[i, "codice_regione"] = frame.loc[i, "codice_regione"].apply(
+        lambda x: code.province[x].codice_regione
+    )
+
+    return frame
+
+
+def _read_province(path):
+    frame = _read_csv(path)
+
+    cr_max = max(code.denominazione_regione.keys())
+    i = frame["codice_regione"] > cr_max
+    frame.loc[i, "codice_regione"] = frame.loc[i, "codice_provincia"].apply(
+        lambda x: code.province[x].codice_regione
+    )
+    frame.loc[i, "denominazione_regione"] = frame.loc[
+        i, "codice_provincia"
+    ].apply(
+        lambda x: code.denominazione_regione[code.province[x].codice_regione]
+    )
 
     return frame
 
@@ -116,9 +136,9 @@ def province():
             urls.append(i["download_url"])
     if len(urls) == 0:
         return None
-    province = _read_csv(urls[0])
+    province = _read_province(urls[0])
     for i in urls[1:]:
-        province = province.append(_read_csv(i), ignore_index=True)
+        province = province.append(_read_province(i), ignore_index=True)
 
     mi = pd.MultiIndex.from_frame(province[INDEX_COLS_PRO])
     province = province.drop(columns=INDEX_COLS_PRO).set_index(mi)

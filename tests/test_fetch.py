@@ -1,24 +1,40 @@
 import pytest
+from pandas.testing import assert_series_equal
+from dpc_covid19 import code, fetch
 
-from dpc_covid19 import fetch
 
-
-def test_NA(rp_fetch):
+def test_NA(province):
     # check that 'NA' (Napoli) is not misunderstud for 'not available'
-    _, p = rp_fetch
-    (
-        (p.sigla_provincia == "NA") == (p.denominazione_provincia == "Napoli")
-    ).all()
+    assert_series_equal(
+        province.sigla_provincia == "NA",
+        province.denominazione_provincia == "Napoli",
+        check_names=False,
+    )
 
 
-def test_trbz(rp_fetch):
-    r, _ = rp_fetch
+def test_code(province, regioni):
+    assert (
+        regioni.index.get_level_values("codice_regione")
+        .isin(code.denominazione_regione.keys())
+        .all()
+    ), "spurious codice_regione in fetch.regioni"
+    assert (
+        province.index.get_level_values("codice_provincia")
+        .isin(code.denominazione_provincia.keys())
+        .all()
+    ), "spurious codice_provincia in fetch.province"
+    assert province.codice_regione.isin(
+        code.denominazione_regione.keys()
+    ).all(), "spurious codice_regione in fetch.province"
+
+
+def test_trbz(regioni):
 
     with pytest.raises(KeyError):
-        r.xs(key=0, level="codice_provincia").xs(key=4, level="codice_regione")
+        regioni.xs(key=0, level="codice_provincia").xs(
+            key=4, level="codice_regione"
+        )
 
 
-def test_validate(rp_fetch):
-    r, p = rp_fetch
-
-    fetch.validate(r, p)
+def test_validate(regioni, province):
+    fetch.validate(regioni, province)
