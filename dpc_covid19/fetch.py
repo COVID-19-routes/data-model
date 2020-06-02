@@ -10,6 +10,8 @@ import requests
 
 from . import code
 
+# GitHub REST API v3
+API_HEADERS = {"Accept": "application/vnd.github.v3+json"}
 URL_API = "https://api.github.com/repos/{owner}/{repo}/contents/{path}"
 URL_REG = URL_API.format(owner="pcm-dpc", repo="COVID-19", path="dati-regioni")
 URL_PRO = URL_API.format(
@@ -37,8 +39,12 @@ INDEX_COLS_REG = ["data", "codice_regione", "codice_provincia"]
 INDEX_COLS_PRO = ["data", "codice_provincia"]
 
 # regex of province and regioni pathnames
-re_pro = re.compile(r"dpc-covid19-ita-province-\d{8}.csv")
-re_reg = re.compile(r"dpc-covid19-ita-regioni-\d{8}.csv")
+# names for files for each date
+# re_pro = re.compile(r"dpc-covid19-ita-province-\d{8}.csv")
+# re_reg = re.compile(r"dpc-covid19-ita-regioni-\d{8}.csv")
+# name of cumulative file
+re_pro = re.compile(r"dpc-covid19-ita-province.csv")
+re_reg = re.compile(r"dpc-covid19-ita-regioni.csv")
 
 __all__ = ["province", "regioni"]
 
@@ -51,16 +57,13 @@ def _read_csv(p):
         encoding="UTF-8",
         na_values=[""],
         keep_default_na=False,
-        converters={"data": pd.to_datetime},
+        parse_dates=["data"],
     )
 
     frame["data"] = frame["data"].dt.tz_localize("Europe/Rome")
 
     # column "stato" must be "ITA"
     assert (frame.stato == "ITA").all()
-
-    # column "data" must be the same for all rows
-    assert (frame.data == frame.iloc[0].data).all()
 
     # drop redundant data
     frame.drop(columns=DROP_COLS, inplace=True)
@@ -111,7 +114,7 @@ def _read_province(path):
 
 
 def regioni():
-    req_api = requests.get(URL_REG)
+    req_api = requests.get(URL_REG, headers=API_HEADERS)
     urls = []
     for i in req_api.json():
         if re_reg.fullmatch(i["name"]):
@@ -122,14 +125,13 @@ def regioni():
     for i in urls[1:]:
         regioni = regioni.append(_read_regioni(i), ignore_index=True)
 
-    mi = pd.MultiIndex.from_frame(regioni[INDEX_COLS_REG])
-    regioni = regioni.drop(columns=INDEX_COLS_REG).set_index(mi)
+    regioni.set_index(INDEX_COLS_REG, inplace=True)
 
     return regioni
 
 
 def province():
-    req_api = requests.get(URL_PRO)
+    req_api = requests.get(URL_PRO, headers=API_HEADERS)
     urls = []
     for i in req_api.json():
         if re_pro.fullmatch(i["name"]):
@@ -140,8 +142,7 @@ def province():
     for i in urls[1:]:
         province = province.append(_read_province(i), ignore_index=True)
 
-    mi = pd.MultiIndex.from_frame(province[INDEX_COLS_PRO])
-    province = province.drop(columns=INDEX_COLS_PRO).set_index(mi)
+    province.set_index(INDEX_COLS_PRO, inplace=True)
 
     return province
 
