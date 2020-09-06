@@ -12,10 +12,14 @@ from . import code
 
 # GitHub REST API v3
 API_HEADERS = {"Accept": "application/vnd.github.v3+json"}
-URL_API = "https://api.github.com/repos/{owner}/{repo}/contents/{path}"
-URL_REG = URL_API.format(owner="pcm-dpc", repo="COVID-19", path="dati-regioni")
-URL_PRO = URL_API.format(
-    owner="pcm-dpc", repo="COVID-19", path="dati-province"
+URL_API = (
+    "https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={branch}"
+).format
+URL_REG = URL_API(
+    owner="pcm-dpc", repo="COVID-19", path="dati-regioni", branch="master"
+)
+URL_PRO = URL_API(
+    owner="pcm-dpc", repo="COVID-19", path="dati-province", branch="master",
 )
 
 DROP_COLS = ["stato", "lat", "long"]
