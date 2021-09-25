@@ -8,8 +8,6 @@ import re
 import pandas as pd
 import requests
 
-from . import code
-
 # GitHub REST API v3
 API_HEADERS = {"Accept": "application/vnd.github.v3+json"}
 URL_API = (
@@ -19,7 +17,10 @@ URL_REG = URL_API(
     owner="pcm-dpc", repo="COVID-19", path="dati-regioni", branch="master"
 )
 URL_PRO = URL_API(
-    owner="pcm-dpc", repo="COVID-19", path="dati-province", branch="master",
+    owner="pcm-dpc",
+    repo="COVID-19",
+    path="dati-province",
+    branch="master",
 )
 
 DROP_COLS = ["stato", "lat", "long"]
@@ -54,7 +55,7 @@ __all__ = ["province", "regioni"]
 
 
 def _read_csv(p):
-    """read daily CSV files, drop redundant data"""
+    """read CSV files"""
 
     frame = pd.read_csv(
         p,
@@ -65,12 +66,6 @@ def _read_csv(p):
     )
 
     frame["data"] = frame["data"].dt.tz_localize("Europe/Rome")
-
-    # column "stato" must be "ITA"
-    assert (frame.stato == "ITA").all()
-
-    # drop redundant data
-    frame.drop(columns=DROP_COLS, inplace=True)
 
     return frame
 
@@ -85,34 +80,34 @@ def _merge_cols(df):
     return ser
 
 
+def _fix_nuts_code(frame, unique_col):
+    cols = frame.columns
+    for c in cols[cols.str.startswith("codice_nuts")]:
+        if (mask := frame[c].isna()).any():
+            mapping = (
+                frame[[unique_col, c]]
+                .dropna()
+                .drop_duplicates()
+                .set_index(unique_col, verify_integrity=True)
+                .squeeze()
+            )
+            frame.loc[mask, c] = frame.loc[mask, unique_col].map(mapping)
+
+
 def _read_regioni(path):
     frame = _read_csv(path)
-
-    cr_max = max(code.denominazione_regione.keys())
-    i = frame["codice_regione"] > cr_max
-    frame["codice_provincia"] = 0
-    frame.loc[i, "codice_provincia"] = frame["codice_regione"]
-
-    frame.loc[i, "codice_regione"] = frame.loc[i, "codice_regione"].apply(
-        lambda x: code.province[x].codice_regione
-    )
+    _fix_nuts_code(frame, "codice_regione")
+    assert frame.codice_nuts_1.notna().all()
+    assert frame.codice_nuts_2.notna().all()
 
     return frame
 
 
 def _read_province(path):
     frame = _read_csv(path)
-
-    cr_max = max(code.denominazione_regione.keys())
-    i = frame["codice_regione"] > cr_max
-    frame.loc[i, "codice_regione"] = frame.loc[i, "codice_provincia"].apply(
-        lambda x: code.province[x].codice_regione
-    )
-    frame.loc[i, "denominazione_regione"] = frame.loc[
-        i, "codice_provincia"
-    ].apply(
-        lambda x: code.denominazione_regione[code.province[x].codice_regione]
-    )
+    _fix_nuts_code(frame, "codice_provincia")
+    assert frame.codice_nuts_1.notna().all()
+    assert frame.codice_nuts_2.notna().all()
 
     return frame
 
@@ -129,8 +124,6 @@ def regioni():
     for i in urls[1:]:
         regioni = regioni.append(_read_regioni(i), ignore_index=True)
 
-    regioni.set_index(INDEX_COLS_REG, inplace=True)
-
     return regioni
 
 
@@ -145,8 +138,6 @@ def province():
     province = _read_province(urls[0])
     for i in urls[1:]:
         province = province.append(_read_province(i), ignore_index=True)
-
-    province.set_index(INDEX_COLS_PRO, inplace=True)
 
     return province
 
