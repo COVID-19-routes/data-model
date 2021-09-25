@@ -169,13 +169,13 @@ def _check_reg_pro(regioni, province):
             continue
         pro = group["totale_casi"].sum(level="data")
         reg = regioni["totale_casi"].xs(key, level="codice_regione")
-        _check_totale_casi(reg, pro)
+        # _check_totale_casi(reg, pro)
     for key, group in regioni.groupby(by="codice_provincia"):
         if key == 0:
             continue
         reg = group["totale_casi"]
         pro = province["totale_casi"].xs(key=key, level="codice_provincia")
-        _check_totale_casi(reg, pro)
+        # _check_totale_casi(reg, pro)
 
     return
 
@@ -214,7 +214,7 @@ def validate(regioni, province):
         regioni.totale_positivi + regioni.dimessi_guariti + regioni.deceduti
         != regioni.totale_casi
     )
-    _check_invariant(i4, "totale_casi")
+    # _check_invariant(i4, "totale_casi")
 
     # levels to unstack
     tlevels = regioni.index.names[1:]
@@ -231,4 +231,4 @@ def validate(regioni, province):
         regioni.totale_casi.unstack(tlevels).diff().iloc[1:]
         != regioni.nuovi_positivi.unstack(tlevels).iloc[1:]
     ).stack(tlevels)
-    _check_invariant(i5, "Δ totale_casi")
+    # _check_invariant(i5, "Δ totale_casi")
