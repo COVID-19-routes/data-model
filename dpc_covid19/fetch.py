@@ -70,16 +70,6 @@ def _read_csv(p):
     return frame
 
 
-def _merge_cols(df):
-    ser = pd.Series(dtype=object)
-    for col_name, col in df.iteritems():
-        if col.notna().any():
-            ser[col_name] = ",".join(col[col.notna()].tolist())
-        else:
-            ser[col_name] = col.iloc[0]
-    return ser
-
-
 def _fix_nuts_code(frame, unique_col):
     cols = frame.columns
     for c in cols[cols.str.startswith("codice_nuts")]:
@@ -140,86 +130,3 @@ def province():
         province = province.append(_read_province(i), ignore_index=True)
 
     return province
-
-
-def _check_totale_casi(reg, pro):
-    if len(pro) != len(reg):
-        raise ValueError("different number of data points")
-    if (abs(pro.index - reg.index.get_level_values("data")) > "1h").any():
-        raise ValueError("data points at different times")
-    # we know that first province data point is empty
-    assert pro.values[0] == 0
-    if (pro.values[1:] != reg.values[1:]).any():
-        raise ValueError("inconsistent data")
-
-
-def _check_reg_pro(regioni, province):
-    _TRENTINO = 4
-    for key, group in province.groupby(by="codice_regione"):
-        if key == _TRENTINO:
-            continue
-        pro = group["totale_casi"].sum(level="data")
-        reg = regioni["totale_casi"].xs(key, level="codice_regione")
-        # _check_totale_casi(reg, pro)
-    for key, group in regioni.groupby(by="codice_provincia"):
-        if key == 0:
-            continue
-        reg = group["totale_casi"]
-        pro = province["totale_casi"].xs(key=key, level="codice_provincia")
-        # _check_totale_casi(reg, pro)
-
-    return
-
-
-def _check_invariant(inv, msg):
-    if inv.any():
-        raise ValueError(
-            "Invariant {} error at {}".format(msg, inv.index[inv].to_list())
-        )
-
-
-def validate(regioni, province):
-    """validate data against some invariants"""
-
-    # province data is consistent with regioni data
-    _check_reg_pro(regioni, province)
-
-    # check different data invariants
-
-    # ricoverati_con_sintomi + terapia_intensiva == totale_ospedalizzati
-    i1 = (
-        regioni.ricoverati_con_sintomi + regioni.terapia_intensiva
-        != regioni.totale_ospedalizzati
-    )
-    _check_invariant(i1, "totale_ospedalizzati")
-
-    # totale_ospedalizzati + isolamento_domiciliare == totale_positivi
-    i2 = (
-        regioni.totale_ospedalizzati + regioni.isolamento_domiciliare
-        != regioni.totale_positivi
-    )
-    _check_invariant(i2, "totale_positivi")
-
-    # totale_positivi + dimessi_guariti + deceduti == totale_casi
-    i4 = (
-        regioni.totale_positivi + regioni.dimessi_guariti + regioni.deceduti
-        != regioni.totale_casi
-    )
-    # _check_invariant(i4, "totale_casi")
-
-    # levels to unstack
-    tlevels = regioni.index.names[1:]
-
-    # variazione_totale_positivi = Δ totale_positivi
-    i3 = (
-        regioni.totale_positivi.unstack(tlevels).diff().iloc[1:]
-        != regioni.variazione_totale_positivi.unstack(tlevels).iloc[1:]
-    ).stack(tlevels)
-    _check_invariant(i3, "Δ totale_positivi")
-
-    # nuovi_positivi =  Δ totale_casi
-    i5 = (
-        regioni.totale_casi.unstack(tlevels).diff().iloc[1:]
-        != regioni.nuovi_positivi.unstack(tlevels).iloc[1:]
-    ).stack(tlevels)
-    # _check_invariant(i5, "Δ totale_casi")
