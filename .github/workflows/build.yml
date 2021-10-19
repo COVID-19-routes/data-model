@@ -1,0 +1,59 @@
+name: Build python package
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: Lint code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: install flake8
+        run: |
+          python -m pip -q install --upgrade pip
+          python -m pip -q install --upgrade flake8
+      - name: run flake8
+        run: flake8 .
+  build:
+    name: PEP517 build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Install PEP517 package builder
+        run: |
+          python -m pip -q install --upgrade pip
+          python -m pip -q install --upgrade build
+      - name: Build package
+        run: python -m build
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: dist
+  test:
+    name: Test artifacts
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist
+      - name: Install package
+        run: |
+          python -m pip -q install --upgrade pip
+          python -m pip -q install dist/*.whl
+          python -m pip -q install pytest
+          python -m pip list
+      - name: Run test suite
+        run: pytest
