@@ -1,6 +1,8 @@
 name: Fetch pcm-dpc/COVID-19
 
-on: [push, pull_request]
+on:
+  schedule:
+    - cron:  '30 20 * * *'
 
 jobs:
   test:
