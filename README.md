@@ -1,4 +1,4 @@
-![Test against pcm-dpc/COVID-19](https://github.com/COVID-19-routes/data-model/workflows/Test%20against%20pcm-dpc/COVID-19/badge.svg)
+[![Fetch pcm-dpc/COVID-19](https://github.com/COVID-19-routes/data-model/actions/workflows/test.yml/badge.svg)](https://github.com/COVID-19-routes/data-model/actions/workflows/test.yml)
 
 # Data model and utilities
 
