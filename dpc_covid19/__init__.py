@@ -18,3 +18,7 @@ Utilities for processing COVID-19 data residing on
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
+
+from .fetch import province, regioni
+
+__all__ = ["province", "regioni"]

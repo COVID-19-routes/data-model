@@ -1,5 +1,5 @@
 """
-functions to get data from DPC GitHub repository at
+functions to fetch data from DPC GitHub repository at
 https://github.com/pcm-dpc/COVID-19
 """
 
@@ -21,6 +21,30 @@ URL_PRO = _URL_TEMPLATE(
     branch="master",
     path="dati-province/dpc-covid19-ita-province.csv",
 )
+
+_CATEGORICAL_REG = [
+    "stato",
+    "codice_regione",
+    "denominazione_regione",
+    "lat",
+    "long",
+    "codice_nuts_1",
+    "codice_nuts_2",
+]
+
+_CATEGORICAL_PRO = [
+    "stato",
+    "codice_regione",
+    "denominazione_regione",
+    "codice_provincia",
+    "denominazione_provincia",
+    "sigla_provincia",
+    "lat",
+    "long",
+    "codice_nuts_1",
+    "codice_nuts_2",
+    "codice_nuts_3",
+]
 
 
 __all__ = ["province", "regioni"]
@@ -56,13 +80,17 @@ def _fix_nuts_code(frame, unique_col):
             frame.loc[mask, c] = frame.loc[mask, unique_col].map(mapping)
 
 
-def regioni():
+def regioni(categories=True):
     frame = _read_csv(URL_REG)
     _fix_nuts_code(frame, "codice_regione")
-    return frame
+    if categories:
+        frame[_CATEGORICAL_REG] = frame[_CATEGORICAL_REG].astype("category")
+    return frame.convert_dtypes()
 
 
-def province():
+def province(categories=True):
     frame = _read_csv(URL_PRO)
     _fix_nuts_code(frame, "codice_provincia")
-    return frame
+    if categories:
+        frame[_CATEGORICAL_PRO] = frame[_CATEGORICAL_PRO].astype("category")
+    return frame.convert_dtypes()
