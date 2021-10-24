@@ -85,7 +85,7 @@ def regioni(categories=True):
     _fix_nuts_code(frame, "codice_regione")
     if categories:
         frame[_CATEGORICAL_REG] = frame[_CATEGORICAL_REG].astype("category")
-    return frame.convert_dtypes()
+    return frame
 
 
 def province(categories=True):
@@ -93,4 +93,4 @@ def province(categories=True):
     _fix_nuts_code(frame, "codice_provincia")
     if categories:
         frame[_CATEGORICAL_PRO] = frame[_CATEGORICAL_PRO].astype("category")
-    return frame.convert_dtypes()
+    return frame
