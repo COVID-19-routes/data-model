@@ -4,12 +4,12 @@ from pandas.testing import assert_series_equal
 from dpc_covid19 import fetch
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def province():
     return fetch.province()
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def regioni():
     return fetch.regioni()
 
