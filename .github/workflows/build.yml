@@ -49,11 +49,11 @@ jobs:
         with:
           name: dist
           path: dist
-      - name: Install package
+      - name: Install package and test support
         run: |
           python -m pip -q install --upgrade pip
           python -m pip -q install dist/*.whl
-          python -m pip -q install pytest
+          python -m pip install pytest~=6.2.5 pytest-lazy-fixture~=0.6.3
           python -m pip list
       - name: Run test suite
         run: pytest

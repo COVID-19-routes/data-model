@@ -1,8 +1,6 @@
 name: Fetch pcm-dpc/COVID-19
 
 on:
-  push:
-  pull_request:
   schedule:
     - cron:  '30 20 * * *'
   workflow_dispatch:
