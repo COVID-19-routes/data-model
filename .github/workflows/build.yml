@@ -7,8 +7,8 @@ jobs:
     name: Lint code
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.9
       - name: install flake8
@@ -21,8 +21,8 @@ jobs:
     name: PEP517 build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.9
       - name: Install PEP517 package builder
@@ -32,7 +32,7 @@ jobs:
       - name: Build package
         run: python -m build
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist
@@ -41,11 +41,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.9
-      - uses: actions/download-artifact@v4.1.7
+      - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
